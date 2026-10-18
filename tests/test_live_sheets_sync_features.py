@@ -21,8 +21,8 @@ print(f"Health Status: {r_health.json()}")
 
 r_home = s.get(LIVE_URL)
 assert "Academic Performance Dashboard" in r_home.text
-assert "Core Management" in r_home.text
-print("Dashboard & Modern Navy Blue layout rendered successfully.")
+assert "top-nav-panel" in r_home.text
+print("Dashboard & Modern Navy Blue Top Navigation layout rendered successfully.")
 
 # 2. Add New Student
 print("\n[STEP 2] Creating a new student record...")
