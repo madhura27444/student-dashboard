@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Progression Chart &bull; Student Academic Progression System{% endblock %}
+{% block page_title %}Academic Progression Analytics & Comparative Curves{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">Progression Analytics & Benchmark Curves</h1>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Multi-semester comparative SGPA analysis, CGPA trajectories, and grade distributions</p>
+    </div>
+    <!-- Student selector for comparison -->
+    <form method="GET" action="{{ url_for('progression_chart_page') }}" style="display: flex; gap: 0.5rem; align-items: center;">
+        <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Compare Student:</label>
+        <select name="student_id" class="form-control" style="width: 220px;" onchange="this.form.submit()">
+            <option value="">-- Department Baseline --</option>
+            {% for s in all_students %}
+            <option value="{{ s.id }}" {% if selected_student_id == s.id|string %}selected{% endif %}>{{ s.full_name }} ({{ s.student_code }})</option>
+            {% endfor %}
+        </select>
+        {% if selected_student_id %}
+        <a href="{{ url_for('progression_chart_page') }}" class="btn btn-sm btn-secondary">Reset</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Comparison Banner if student selected -->
+{% if selected_student %}
+<div class="card" style="border-left: 4px solid var(--primary); padding: 1rem 1.25rem; margin-bottom: 1.25rem; background: var(--primary-light);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+            <strong style="color: var(--primary-hover); font-size: 1.05rem;">Comparing: {{ selected_student.full_name }} ({{ selected_student.student_code }})</strong>
+            <span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 0.5rem;">Admission Year: {{ selected_student.admission_year }} &bull; Status: {{ selected_student.current_status }}</span>
+        </div>
+        <a href="{{ url_for('student_profile', student_id=selected_student.id) }}" class="btn btn-sm btn-primary">Open Full Profile &rarr;</a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Progression Chart Card -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">Semester Progression Curve (Sem 1 to 8)</h2>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">
+                {% if selected_student %}
+                    Showing Department Benchmark vs. <strong>{{ selected_student.full_name }}</strong>
+                {% else %}
+                    Showing Aggregate Department Benchmark Average across all semesters
+                {% endif %}
+            </span>
+        </div>
+        <a href="{{ url_for('export_excel_file') }}" class="btn btn-sm btn-secondary">&#128190; Export Data</a>
+    </div>
+    <div style="height: 320px;">
+        <canvas id="mainProgressionChart"></canvas>
+    </div>
+</div>
+
+<!-- Grid: Semester Breakdown & Grade Distribution -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Semester Progression Table -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title" style="font-size: 1.05rem;">Semester Aggregate Statistics</h2>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">SQL Aggregate Group By</span>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Semester</th>
+                        <th>Average SGPA</th>
+                        <th>Highest SGPA</th>
+                        <th>Lowest SGPA</th>
+                        <th>Students</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in sem_progression %}
+                    <tr>
+                        <td><strong>Semester {{ p.semester_number }}</strong></td>
+                        <td><span class="badge badge-grade">{{ "%.2f"|format(p.avg_sgpa) }}</span></td>
+                        <td style="color: var(--accent); font-weight: 600;">{{ "%.2f"|format(p.max_sgpa) }}</td>
+                        <td style="color: var(--warning); font-weight: 600;">{{ "%.2f"|format(p.min_sgpa) }}</td>
+                        <td>{{ p.student_count }} records</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--text-muted);">No semester statistics available.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Grade Distribution Breakdown -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title" style="font-size: 1.05rem;">10-Point Scale Grade Distribution</h2>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Subject Marks Breakdown</span>
+        </div>
+        <div style="height: 220px; margin-bottom: 1rem;">
+            <canvas id="gradeDistributionChart"></canvas>
+        </div>
+        <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 0.5rem; font-size: 0.8rem;">
+            {% for g in grade_distribution %}
+            <div style="text-align: center;">
+                <span class="badge badge-grade">{{ g.grade }}</span>
+                <div style="font-weight: 700; margin-top: 0.2rem;">{{ g.count }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Top Academic Performers Table -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title" style="font-size: 1.05rem;">Top Academic Performers (Current Department Leaders)</h2>
+        <a href="{{ url_for('student_directory') }}" class="btn btn-sm btn-secondary">View All Students</a>
+    </div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Student Name</th>
+                    <th>Roll Number</th>
+                    <th>Admission Year</th>
+                    <th>Latest Semester</th>
+                    <th>Current Cumulative CGPA</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for st in top_performers %}
+                <tr>
+                    <td><strong>#{{ loop.index }}</strong></td>
+                    <td>
+                        <a href="{{ url_for('student_profile', student_id=st.id) }}" style="color: var(--primary); font-weight: 700; text-decoration: none;">
+                            {{ st.full_name }}
+                        </a>
+                    </td>
+                    <td><code>{{ st.student_code }}</code></td>
+                    <td>{{ st.admission_year }}</td>
+                    <td>Semester {{ st.max_sem }}</td>
+                    <td><span class="badge badge-active" style="font-size: 0.85rem; font-weight: 800;">{{ "%.2f"|format(st.cgpa) }}</span></td>
+                    <td style="text-align: right;">
+                        <a href="{{ url_for('student_profile', student_id=st.id) }}" class="btn btn-sm btn-secondary">View Portfolio</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted);">No student academic records found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Department Progression Data
+    const semProg = {{ sem_progression|tojson }};
+    const semLabels = semProg.map(d => `Sem ${d.semester_number}`);
+    const semAvgValues = semProg.map(d => d.avg_sgpa);
+
+    // Selected Student Data
+    const studentSems = {{ student_sems|tojson }};
+    const studentMap = {};
+    studentSems.forEach(s => { studentMap[s.semester_number] = s.sgpa; });
+    const studentCgpaMap = {};
+    studentSems.forEach(s => { studentCgpaMap[s.semester_number] = s.cgpa; });
+
+    const datasets = [
+        {
+            label: 'Department Benchmark Average',
+            data: semAvgValues,
+            borderColor: '#94a3b8',
+            backgroundColor: 'rgba(148, 163, 184, 0.1)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            tension: 0.3,
+            pointRadius: 4
+        }
+    ];
+
+    {% if selected_student %}
+    const studentData = semProg.map(d => studentMap[d.semester_number] || null);
+    const studentCgpaData = semProg.map(d => studentCgpaMap[d.semester_number] || null);
+    datasets.push({
+        label: '{{ selected_student.full_name }} (SGPA)',
+        data: studentData,
+        borderColor: '#0d9488',
+        backgroundColor: 'rgba(13, 148, 136, 0.15)',
+        borderWidth: 3,
+        fill: true,
+        tension: 0.3,
+        pointBackgroundColor: '#0f766e',
+        pointRadius: 6
+    });
+    datasets.push({
+        label: '{{ selected_student.full_name }} (Cumulative CGPA)',
+        data: studentCgpaData,
+        borderColor: '#10b981',
+        borderWidth: 2.5,
+        tension: 0.2,
+        pointRadius: 5
+    });
+    {% endif %}
+
+    const ctx = document.getElementById('mainProgressionChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: semLabels.length ? semLabels : ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { min: 0, max: 10, ticks: { stepSize: 2 } }
+            },
+            plugins: {
+                legend: { position: 'top', labels: { boxWidth: 14 } }
+            }
+        }
+    });
+
+    // Grade Distribution Bar Chart
+    const gradeData = {{ grade_distribution|tojson }};
+    const gLabels = gradeData.map(g => g.grade);
+    const gCounts = gradeData.map(g => g.count);
+
+    const ctxGrade = document.getElementById('gradeDistributionChart').getContext('2d');
+    new Chart(ctxGrade, {
+        type: 'bar',
+        data: {
+            labels: gLabels.length ? gLabels : ['O', 'A+', 'A', 'B+', 'B', 'C', 'P', 'F'],
+            datasets: [{
+                label: 'Grades Count',
+                data: gCounts.length ? gCounts : [10, 8, 6, 4, 2, 1, 0, 0],
+                backgroundColor: '#0d9488',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        }
+    });
+</script>
+{% endblock %}

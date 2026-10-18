@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: student-academic-progression
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 2 --bind 0.0.0.0:$PORT
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_TYPE
+        value: sqlite
+      - key: GOOGLE_SHEETS_SECRET_TOKEN
+        value: kajal-academic-sync-token-2026
+      - key: GOOGLE_SHEETS_WEBHOOK_URL
+        sync: false

@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard &bull; Student Academic Progression System{% endblock %}
+{% block page_title %}Academic Performance Dashboard & KPIs{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 1.6rem; font-weight: 800; color: var(--text-main);">Academic Performance Dashboard</h1>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Relational DBMS real-time aggregate progression metrics & portfolio overview</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <a href="{{ url_for('student_directory') }}" class="btn btn-secondary">Student Directory</a>
+        <a href="{{ url_for('export_excel_file') }}" class="btn btn-primary">Export All to Excel</a>
+    </div>
+</div>
+
+<!-- KPI Cards Grid -->
+<div class="cards-grid">
+    <div class="stat-card">
+        <span class="stat-title">Total Enrolled</span>
+        <span class="stat-value">{{ stats.total_students }}</span>
+        <span class="stat-sub">Registered student records</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-title">Active Students</span>
+        <span class="stat-value" style="color: var(--accent);">{{ stats.active_students }}</span>
+        <span class="stat-sub">Currently pursuing studies</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-title">On Leave / Gaps</span>
+        <span class="stat-value" style="color: var(--warning);">{{ stats.on_leave_students }}</span>
+        <span class="stat-sub">Authorized study pauses</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-title">Department Avg CGPA</span>
+        <span class="stat-value" style="color: var(--primary);">{{ "%.2f"|format(cgpa_stats.avg_cgpa or 0.0) }}</span>
+        <span class="stat-sub">Max Recorded: {{ "%.2f"|format(cgpa_stats.max_cgpa or 0.0) }}</span>
+    </div>
+</div>
+
+<!-- Progression Charts -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 1.75rem;">
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <h2 class="card-title" style="font-size: 1.05rem;">Semester-Wise Progression (Average SGPA)</h2>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Aggregate SQL Group By</span>
+        </div>
+        <div style="height: 260px;">
+            <canvas id="progressionChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <h2 class="card-title" style="font-size: 1.05rem;">Extracurricular Activity Categories</h2>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Portfolio Distribution</span>
+        </div>
+        <div style="height: 260px;">
+            <canvas id="activityChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Feeds Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem;">
+    <!-- Recent Seminars -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title" style="font-size: 1.05rem;">Recent Seminars & Conferences</h2>
+            <a href="{{ url_for('portfolio_directory') }}" class="btn btn-sm btn-secondary">View All</a>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Seminar Title</th>
+                        <th>Role</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sem in recent_seminars %}
+                    <tr>
+                        <td>
+                            <strong><a href="{{ url_for('student_profile', student_id=sem.student_id) }}" style="color: var(--primary); text-decoration: none;">{{ sem.full_name }}</a></strong>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">{{ sem.student_code }}</div>
+                        </td>
+                        <td>{{ sem.title }}</td>
+                        <td><span class="badge badge-grade">{{ sem.participation_type }}</span></td>
+                        <td>{{ sem.event_date }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: var(--text-muted);">No seminar records logged yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Activities -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title" style="font-size: 1.05rem;">Recent Extracurricular Activities</h2>
+            <a href="{{ url_for('portfolio_directory') }}" class="btn btn-sm btn-secondary">View All</a>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Activity Title</th>
+                        <th>Category</th>
+                        <th>Achievement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for act in recent_activities %}
+                    <tr>
+                        <td>
+                            <strong><a href="{{ url_for('student_profile', student_id=act.student_id) }}" style="color: var(--primary); text-decoration: none;">{{ act.full_name }}</a></strong>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">{{ act.student_code }}</div>
+                        </td>
+                        <td>{{ act.title }}</td>
+                        <td><span class="badge badge-active">{{ act.category }}</span></td>
+                        <td><strong>{{ act.achievement or 'Participant' }}</strong></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: var(--text-muted);">No activity records logged yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Semester Progression Chart
+    const semProgData = {{ sem_progression|tojson }};
+    const semLabels = semProgData.map(d => `Sem ${d.semester_number}`);
+    const semValues = semProgData.map(d => d.avg_sgpa);
+
+    const ctxProg = document.getElementById('progressionChart').getContext('2d');
+    new Chart(ctxProg, {
+        type: 'line',
+        data: {
+            labels: semLabels.length ? semLabels : ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
+            datasets: [{
+                label: 'Department Avg SGPA',
+                data: semValues.length ? semValues : [8.5, 8.8, 8.6, 9.1],
+                borderColor: '#0d9488',
+                backgroundColor: 'rgba(13, 148, 136, 0.1)',
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.35,
+                pointBackgroundColor: '#0f766e',
+                pointRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { min: 0, max: 10, ticks: { stepSize: 2 } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // Activities Category Distribution Chart
+    const actData = {{ activity_dist|tojson }};
+    const actLabels = actData.map(d => d.category);
+    const actCounts = actData.map(d => d.count);
+
+    const ctxAct = document.getElementById('activityChart').getContext('2d');
+    new Chart(ctxAct, {
+        type: 'doughnut',
+        data: {
+            labels: actLabels.length ? actLabels : ['Technical', 'Sports', 'Cultural', 'Social/NSS', 'Hackathon'],
+            datasets: [{
+                data: actCounts.length ? actCounts : [5, 3, 2, 2, 4],
+                backgroundColor: ['#0d9488', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+            }
+        }
+    });
+</script>
+{% endblock %}

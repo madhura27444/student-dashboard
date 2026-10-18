@@ -1,0 +1,661 @@
+{% extends "base.html" %}
+
+{% block title %}{{ student.full_name }} &bull; Academic Portfolio{% endblock %}
+{% block page_title %}{{ student.full_name }} &bull; Student Profile ({{ student.student_code }}){% endblock %}
+
+{% block content %}
+<!-- Student Header Card -->
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+                <h1 style="font-size: 1.7rem; font-weight: 800; color: var(--text-main); margin: 0;">{{ student.full_name }}</h1>
+                <span class="badge {% if student.current_status == 'Active' %}badge-active{% elif student.current_status == 'On Leave' %}badge-onleave{% else %}badge-graduated{% endif %}">
+                    {{ student.current_status }}
+                </span>
+            </div>
+            <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; color: var(--text-muted); font-size: 0.9rem;">
+                <span><strong>Roll No:</strong> <code>{{ student.student_code }}</code></span>
+                <span><strong>Email:</strong> {{ student.email }}</span>
+                <span><strong>Admission Year:</strong> {{ student.admission_year }}</span>
+            </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary btn-sm" data-modal-target="editStudentModal">Edit Info</button>
+            <button class="btn btn-danger btn-sm" data-modal-target="deleteStudentModal">Delete Student</button>
+        </div>
+    </div>
+</div>
+
+<!-- Student Academic Progression Chart & Summary -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <h2 class="card-title" style="font-size: 1.05rem;">Student SGPA vs. Cumulative CGPA Curve</h2>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Dynamic Academic Recalculation</span>
+        </div>
+        <div style="height: 220px;">
+            <canvas id="studentCurveChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+        <div class="card-header">
+            <h2 class="card-title" style="font-size: 1.05rem;">Academic Highlights</h2>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div>
+                <span class="stat-title">Semesters Logged</span>
+                <div style="font-size: 1.5rem; font-weight: 700;">{{ semesters|length }} Semesters</div>
+            </div>
+            <div>
+                <span class="stat-title">Current CGPA</span>
+                <div style="font-size: 1.75rem; font-weight: 800; color: var(--primary);">
+                    {% if semesters %}
+                        {{ "%.2f"|format(semesters[-1].cgpa) }}
+                    {% else %}
+                        0.00
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" data-modal-target="addSemesterModal">+ Add New Semester</button>
+    </div>
+</div>
+
+<!-- Semesters and Detailed Subject Marks -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Semester-Wise Performance & Subject Marks</h2>
+        <button class="btn btn-sm btn-primary" data-modal-target="addSemesterModal">+ Add Semester</button>
+    </div>
+
+    {% if semesters %}
+        {% for sem in semesters %}
+        <div style="border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 1.25rem; overflow: hidden;">
+            <div style="background-color: var(--bg-muted); padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <strong style="font-size: 1rem; color: var(--text-main);">Semester {{ sem.semester_number }}</strong>
+                    <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 0.5rem;">({{ sem.academic_year }})</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <span style="font-size: 0.875rem;">Credits: <strong>{{ "%.1f"|format(sem.credits) }}</strong></span>
+                    <span style="font-size: 0.875rem;">SGPA: <strong style="color: var(--primary);">{{ "%.2f"|format(sem.sgpa) }}</strong></span>
+                    <span style="font-size: 0.875rem;">Cumulative CGPA: <strong style="color: var(--accent);">{{ "%.2f"|format(sem.cgpa) }}</strong></span>
+                    <button class="btn btn-sm btn-secondary" onclick="openAddMarkModal({{ sem.id }}, {{ sem.semester_number }})">+ Add Subject</button>
+                    <form method="POST" action="{{ url_for('semester_delete', semester_id=sem.id) }}" style="display: inline;" onsubmit="return confirm('Delete Semester {{ sem.semester_number }} and all its marks?');">
+                        <button type="submit" class="btn btn-sm btn-danger">&times;</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="table-container" style="border: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Subject Code</th>
+                            <th>Subject Name</th>
+                            <th>Credits</th>
+                            <th>Max Marks</th>
+                            <th>Obtained</th>
+                            <th>Grade</th>
+                            <th style="text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mark in sem.marks %}
+                        <tr>
+                            <td><strong><code>{{ mark.subject_code }}</code></strong></td>
+                            <td>{{ mark.subject_name }}</td>
+                            <td>{{ mark.credits }}</td>
+                            <td>{{ mark.max_marks }}</td>
+                            <td>{{ mark.obtained_marks }}</td>
+                            <td><span class="badge badge-grade">{{ mark.grade }}</span></td>
+                            <td style="text-align: right;">
+                                <form method="POST" action="{{ url_for('mark_delete', mark_id=mark.id) }}" style="display: inline;" onsubmit="return confirm('Remove {{ mark.subject_name }}?');">
+                                    <button type="submit" class="btn btn-sm btn-danger" style="padding: 0.2rem 0.5rem;">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem;">
+                                No subject marks added for Semester {{ sem.semester_number }} yet. Click "+ Add Subject" to input marks.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+            No semesters registered yet. Click "+ Add Semester" to start tracking academic performance.
+        </div>
+    {% endif %}
+</div>
+
+<!-- Secondary Sections: School Records, Gap Years, Seminars & Activities -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem;">
+    <!-- School Records (10th/12th) -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title" style="font-size: 1.05rem;">Secondary & Higher Secondary Records</h2>
+            <button class="btn btn-sm btn-secondary" data-modal-target="addSchoolModal">+ Add</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Level</th>
+                        <th>Institution / Board</th>
+                        <th>Year</th>
+                        <th>Marks</th>
+                        <th>%</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sc in school_records %}
+                    <tr>
+                        <td><strong>{{ sc.education_level }}</strong></td>
+                        <td>
+                            <div>{{ sc.institution }}</div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">{{ sc.board }}</span>
+                        </td>
+                        <td>{{ sc.passing_year }}</td>
+                        <td>{{ sc.obtained_marks }}/{{ sc.max_marks }}</td>
+                        <td><span class="badge badge-active">{{ sc.percentage }}%</span></td>
+                        <td>
+                            <form method="POST" action="{{ url_for('school_record_delete', record_id=sc.id) }}" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-danger" style="padding: 0.15rem 0.4rem;">&times;</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No 10th/12th school records logged.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Gap Years -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title" style="font-size: 1.05rem;">Academic Gap Years</h2>
+            <button class="btn btn-sm btn-secondary" data-modal-target="addGapModal">+ Add Gap</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Duration</th>
+                        <th>Reason</th>
+                        <th>Remarks</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for gy in gap_years %}
+                    <tr>
+                        <td><strong>{{ gy.start_year }} - {{ gy.end_year }}</strong></td>
+                        <td>{{ gy.reason }}</td>
+                        <td style="color: var(--text-muted); font-size: 0.8rem;">{{ gy.remarks or 'None' }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('gap_year_delete', gap_id=gy.id) }}" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-danger" style="padding: 0.15rem 0.4rem;">&times;</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No gap years on record. Continuous academic progression.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Seminars & Activities Section -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+    <!-- Student Seminars -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title" style="font-size: 1.05rem;">Seminars & Conferences</h2>
+            <button class="btn btn-sm btn-secondary" data-modal-target="addSeminarModal">+ Add Seminar</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Title & Organizer</th>
+                        <th>Role</th>
+                        <th>Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sem in seminars %}
+                    <tr>
+                        <td>
+                            <strong>{{ sem.title }}</strong>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">Org: {{ sem.organizer }}</div>
+                        </td>
+                        <td><span class="badge badge-grade">{{ sem.participation_type }}</span></td>
+                        <td>{{ sem.event_date }}</td>
+                        <td>
+                            <form method="POST" action="{{ url_for('seminar_delete', seminar_id=sem.id) }}" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-danger" style="padding: 0.15rem 0.4rem;">&times;</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No seminars recorded.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Student Activities -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title" style="font-size: 1.05rem;">Extracurricular Activities</h2>
+            <button class="btn btn-sm btn-secondary" data-modal-target="addActivityModal">+ Add Activity</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Activity Title</th>
+                        <th>Category</th>
+                        <th>Achievement</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for act in activities %}
+                    <tr>
+                        <td>
+                            <strong>{{ act.title }}</strong>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">{{ act.event_date }}</div>
+                        </td>
+                        <td><span class="badge badge-active">{{ act.category }}</span></td>
+                        <td><strong>{{ act.achievement or 'Participant' }}</strong></td>
+                        <td>
+                            <form method="POST" action="{{ url_for('activity_delete', activity_id=act.id) }}" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-danger" style="padding: 0.15rem 0.4rem;">&times;</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No activities logged.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODALS ================= -->
+
+<!-- Add Semester Modal -->
+<div class="modal-overlay" id="addSemesterModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="card-title" style="font-size: 1.15rem;">Add Semester Record</h2>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('semester_add', student_id=student.id) }}">
+            <div class="form-group">
+                <label class="form-label">Semester Number *</label>
+                <select name="semester_number" class="form-control" required>
+                    {% for n in range(1, 9) %}
+                    <option value="{{ n }}">Semester {{ n }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Academic Year *</label>
+                <input type="text" name="academic_year" class="form-control" required placeholder="e.g. 2024-2025">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Semester</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Subject Mark Modal -->
+<div class="modal-overlay" id="addMarkModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="card-title" style="font-size: 1.15rem;" id="markModalTitle">Add Subject Mark</h2>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form id="markForm" method="POST" action="">
+            <div class="form-group">
+                <label class="form-label">Subject Code *</label>
+                <input type="text" name="subject_code" class="form-control" required placeholder="e.g. CS401" style="text-transform: uppercase;">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Subject Name *</label>
+                <input type="text" name="subject_name" class="form-control" required placeholder="e.g. Database Systems">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Credits *</label>
+                    <input type="number" step="0.5" min="1" max="10" name="credits" class="form-control" value="4.0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Max Marks</label>
+                    <input type="number" id="max_marks" name="max_marks" class="form-control" value="100.0" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Obtained Marks *</label>
+                <input type="number" step="0.5" id="obtained_marks" name="obtained_marks" class="form-control" required placeholder="e.g. 88.5">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <span id="calculated_grade_badge" class="badge badge-grade" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+                    Grade: Predictor Ready
+                </span>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Mark</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add School Record Modal -->
+<div class="modal-overlay" id="addSchoolModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="card-title" style="font-size: 1.15rem;">Add Secondary / High School Record</h2>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('school_record_add', student_id=student.id) }}">
+            <div class="form-group">
+                <label class="form-label">Education Level *</label>
+                <select name="education_level" class="form-control" required>
+                    <option value="10th Secondary">10th Secondary</option>
+                    <option value="12th Higher Secondary">12th Higher Secondary</option>
+                    <option value="Diploma">Diploma</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Institution / School Name *</label>
+                <input type="text" name="institution" class="form-control" required placeholder="e.g. St. Xavier High School">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Board *</label>
+                    <input type="text" name="board" class="form-control" required placeholder="CBSE / ICSE / State Board">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Passing Year *</label>
+                    <input type="number" name="passing_year" class="form-control" required value="2022">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Max Marks *</label>
+                    <input type="number" step="0.5" name="max_marks" class="form-control" value="500.0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Obtained Marks *</label>
+                    <input type="number" step="0.5" name="obtained_marks" class="form-control" required placeholder="e.g. 450">
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+                <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+                <button type="submit" class="btn btn-primary">Save School Record</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Gap Year Modal -->
+<div class="modal-overlay" id="addGapModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="card-title" style="font-size: 1.15rem;">Record Gap Year</h2>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('gap_year_add', student_id=student.id) }}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Start Year *</label>
+                    <input type="number" name="start_year" class="form-control" required value="2021">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">End Year *</label>
+                    <input type="number" name="end_year" class="form-control" required value="2022">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Reason for Gap *</label>
+                <input type="text" name="reason" class="form-control" required placeholder="e.g. Entrance Prep, Health, Relocation">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Remarks</label>
+                <textarea name="remarks" class="form-control" rows="2" placeholder="Official documentation details..."></textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Gap Record</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Seminar Modal -->
+<div class="modal-overlay" id="addSeminarModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="card-title" style="font-size: 1.15rem;">Record Seminar / Workshop</h2>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('seminar_add', student_id=student.id) }}">
+            <div class="form-group">
+                <label class="form-label">Seminar / Event Title *</label>
+                <input type="text" name="title" class="form-control" required placeholder="e.g. IEEE Conference on Cloud Systems">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Organizer *</label>
+                <input type="text" name="organizer" class="form-control" required placeholder="e.g. IEEE Computer Society">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Event Date *</label>
+                    <input type="date" name="event_date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Participation Type</label>
+                    <select name="participation_type" class="form-control">
+                        <option value="Attendee">Attendee</option>
+                        <option value="Presenter">Presenter</option>
+                        <option value="Organizer">Organizer</option>
+                        <option value="Keynote">Keynote</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Certificate ID / Link</label>
+                <input type="text" name="certificate_details" class="form-control" placeholder="e.g. CERT-IEEE-2024-998">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Seminar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Activity Modal -->
+<div class="modal-overlay" id="addActivityModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="card-title" style="font-size: 1.15rem;">Record Extracurricular Activity</h2>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('activity_add', student_id=student.id) }}">
+            <div class="form-group">
+                <label class="form-label">Activity Title *</label>
+                <input type="text" name="title" class="form-control" required placeholder="e.g. Smart India Hackathon">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-control">
+                        <option value="Technical">Technical</option>
+                        <option value="Hackathon">Hackathon</option>
+                        <option value="Sports">Sports</option>
+                        <option value="Cultural">Cultural</option>
+                        <option value="Social/NSS">Social / NSS</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Event Date *</label>
+                    <input type="date" name="event_date" class="form-control" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Achievement / Award</label>
+                <input type="text" name="achievement" class="form-control" placeholder="e.g. Winner, 1st Runner Up, Participant">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-control" rows="2" placeholder="Brief details about the project or contribution..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Certificate Details</label>
+                <input type="text" name="certificate_details" class="form-control" placeholder="e.g. SIH-2023-GOLD">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Activity</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Student Modal -->
+<div class="modal-overlay" id="editStudentModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="card-title" style="font-size: 1.15rem;">Edit Student Info</h2>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('student_edit', student_id=student.id) }}">
+            <div class="form-group">
+                <label class="form-label">Student Code</label>
+                <input type="text" name="student_code" class="form-control" required value="{{ student.student_code }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" name="full_name" class="form-control" required value="{{ student.full_name }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-control" required value="{{ student.email }}">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Admission Year</label>
+                    <input type="number" name="admission_year" class="form-control" required value="{{ student.admission_year }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select name="current_status" class="form-control">
+                        <option value="Active" {% if student.current_status == 'Active' %}selected{% endif %}>Active</option>
+                        <option value="On Leave" {% if student.current_status == 'On Leave' %}selected{% endif %}>On Leave</option>
+                        <option value="Graduated" {% if student.current_status == 'Graduated' %}selected{% endif %}>Graduated</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem;">
+                <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Student Modal -->
+<div class="modal-overlay" id="deleteStudentModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="card-title" style="font-size: 1.15rem; color: var(--danger);">Confirm Deletion</h2>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.95rem;">
+            Are you sure you want to delete <strong>{{ student.full_name }}</strong> (<code>{{ student.student_code }}</code>)?
+            This will permanently remove all associated school records, semesters, marks, gap years, and portfolio records (Cascade Delete).
+        </p>
+        <form method="POST" action="{{ url_for('student_delete', student_id=student.id) }}" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+            <button type="submit" class="btn btn-danger">Yes, Delete Record</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openAddMarkModal(semId, semNum) {
+        const form = document.getElementById('markForm');
+        form.action = `/semesters/${semId}/marks/add`;
+        document.getElementById('markModalTitle').textContent = `Add Subject Mark (Semester ${semNum})`;
+        document.getElementById('addMarkModal').classList.add('active');
+    }
+
+    // Student Progression Chart
+    const pLabels = {{ progression_labels|safe }};
+    const pSgpa = {{ progression_sgpa|safe }};
+    const pCgpa = {{ progression_cgpa|safe }};
+
+    const ctx = document.getElementById('studentCurveChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: pLabels.length ? pLabels : ['Sem 1'],
+            datasets: [
+                {
+                    label: 'Semester SGPA',
+                    data: pSgpa.length ? pSgpa : [0],
+                    borderColor: '#0d9488',
+                    backgroundColor: 'rgba(13, 148, 136, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.2,
+                    pointRadius: 4
+                },
+                {
+                    label: 'Cumulative CGPA',
+                    data: pCgpa.length ? pCgpa : [0],
+                    borderColor: '#10b981',
+                    borderDash: [5, 5],
+                    borderWidth: 2.5,
+                    tension: 0.2,
+                    pointRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { min: 0, max: 10, ticks: { stepSize: 2 } }
+            },
+            plugins: {
+                legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } }
+            }
+        }
+    });
+</script>
+{% endblock %}

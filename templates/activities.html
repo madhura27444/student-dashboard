@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Activities Portfolio &bull; Student Academic Progression System{% endblock %}
+{% block page_title %}Extracurricular & Co-Curricular Activities Portfolio{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">Extracurricular Activities & Achievements</h1>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Track hackathons, competitive programming, sports tournaments, cultural events, and community service</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <button class="btn btn-primary" data-modal-target="addMasterActivityModal">+ Record New Activity</button>
+        <a href="{{ url_for('export_excel_file') }}" class="btn btn-secondary">&#128190; Export to Excel</a>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="cards-grid">
+    <div class="stat-card">
+        <span class="stat-title">Total Activities</span>
+        <span class="stat-value">{{ stats.total_activities }}</span>
+        <span class="stat-sub">Logged student participations</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-title">Hackathons & Sprints</span>
+        <span class="stat-value" style="color: var(--primary);">{{ stats.hackathons }}</span>
+        <span class="stat-sub">Software competitions</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-title">Awards & Trophies</span>
+        <span class="stat-value" style="color: var(--accent);">{{ stats.awards }}</span>
+        <span class="stat-sub">Winners & 1st Runner Ups</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-title">Technical Challenges</span>
+        <span class="stat-value">{{ stats.technical }}</span>
+        <span class="stat-sub">Code challenges & open source</span>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card" style="padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+    <form method="GET" action="{{ url_for('activities_page') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+        <div style="flex: 2; min-width: 200px;">
+            <label class="form-label" style="font-size: 0.8rem;">Search Activities</label>
+            <input type="text" name="search" class="form-control" placeholder="Search by title or achievement..." value="{{ search }}">
+        </div>
+        <div style="flex: 1; min-width: 160px;">
+            <label class="form-label" style="font-size: 0.8rem;">Category</label>
+            <select name="category" class="form-control">
+                <option value="">All Categories</option>
+                <option value="Technical" {% if current_category == 'Technical' %}selected{% endif %}>Technical</option>
+                <option value="Hackathon" {% if current_category == 'Hackathon' %}selected{% endif %}>Hackathon</option>
+                <option value="Sports" {% if current_category == 'Sports' %}selected{% endif %}>Sports</option>
+                <option value="Cultural" {% if current_category == 'Cultural' %}selected{% endif %}>Cultural</option>
+                <option value="Social/NSS" {% if current_category == 'Social/NSS' %}selected{% endif %}>Social / NSS</option>
+            </select>
+        </div>
+        <div style="flex: 1; min-width: 180px;">
+            <label class="form-label" style="font-size: 0.8rem;">Student</label>
+            <select name="student_id" class="form-control">
+                <option value="">All Students</option>
+                {% for st in all_students %}
+                <option value="{{ st.id }}" {% if current_student_id == st.id|string %}selected{% endif %}>{{ st.full_name }} ({{ st.student_code }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button type="submit" class="btn btn-secondary">Filter</button>
+            {% if search or current_category or current_student_id %}
+            <a href="{{ url_for('activities_page') }}" class="btn btn-secondary" style="color: var(--text-muted);">Reset</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Activities Table -->
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Activity Title</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Event Date</th>
+                    <th>Achievement</th>
+                    <th>Certificate</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for act in activities %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('student_profile', student_id=act.student_id) }}" style="color: var(--primary); font-weight: 700; text-decoration: none;">
+                            {{ act.full_name }}
+                        </a>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">{{ act.student_code }}</div>
+                    </td>
+                    <td><strong>{{ act.title }}</strong></td>
+                    <td><span class="badge badge-active">{{ act.category }}</span></td>
+                    <td style="color: var(--text-muted); font-size: 0.85rem; max-width: 250px;">{{ act.description or '—' }}</td>
+                    <td>{{ act.event_date }}</td>
+                    <td><span class="badge badge-grade">{{ act.achievement or 'Participant' }}</span></td>
+                    <td><code>{{ act.certificate_details or 'None' }}</code></td>
+                    <td style="text-align: right;">
+                        <form method="POST" action="{{ url_for('activity_delete', activity_id=act.id) }}" style="display: inline;" onsubmit="return confirm('Remove {{ act.title }}?');">
+                            <button type="submit" class="btn btn-sm btn-danger" style="padding: 0.2rem 0.5rem;">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                        No activities found matching criteria. Click "+ Record New Activity" to log an achievement.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Activity Modal -->
+<div class="modal-overlay" id="addMasterActivityModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="card-title" style="font-size: 1.15rem;">Record Extracurricular Activity</h2>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('activity_create_master') }}">
+            <div class="form-group">
+                <label class="form-label">Student *</label>
+                <select name="student_id" class="form-control" required>
+                    <option value="">-- Select Student --</option>
+                    {% for st in all_students %}
+                    <option value="{{ st.id }}">{{ st.full_name }} ({{ st.student_code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Activity Title *</label>
+                <input type="text" name="title" class="form-control" required placeholder="e.g. Smart India Hackathon 2024">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-control">
+                        <option value="Technical">Technical</option>
+                        <option value="Hackathon">Hackathon</option>
+                        <option value="Sports">Sports</option>
+                        <option value="Cultural">Cultural</option>
+                        <option value="Social/NSS">Social / NSS</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Event Date *</label>
+                    <input type="date" name="event_date" class="form-control" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Achievement / Award</label>
+                <input type="text" name="achievement" class="form-control" placeholder="e.g. Winner, 1st Runner Up, Participant">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-control" rows="2" placeholder="Brief details about the activity or project..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Certificate Details</label>
+                <input type="text" name="certificate_details" class="form-control" placeholder="e.g. SIH-2024-CERT-01">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem;">
+                <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Activity & Sync</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

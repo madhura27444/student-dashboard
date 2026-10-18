@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Seminars Portfolio &bull; Student Academic Progression System{% endblock %}
+{% block page_title %}Seminars & Conferences Portfolio{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">Seminars, Conferences & Workshops</h1>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Document student conference publications, keynote presentations, and national symposium attendances</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <button class="btn btn-primary" data-modal-target="addMasterSeminarModal">+ Record New Seminar</button>
+        <a href="{{ url_for('export_excel_file') }}" class="btn btn-secondary">&#128190; Export to Excel</a>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="cards-grid">
+    <div class="stat-card">
+        <span class="stat-title">Total Seminars Logged</span>
+        <span class="stat-value">{{ stats.total_seminars }}</span>
+        <span class="stat-sub">Academic conferences & workshops</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-title">Research Presenters</span>
+        <span class="stat-value" style="color: var(--primary);">{{ stats.presenters }}</span>
+        <span class="stat-sub">Paper presentations delivered</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-title">Keynote Speakers</span>
+        <span class="stat-value" style="color: var(--accent);">{{ stats.keynotes }}</span>
+        <span class="stat-sub">Distinguished student talks</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-title">Workshop Attendees</span>
+        <span class="stat-value">{{ stats.attendees }}</span>
+        <span class="stat-sub">Technical skill workshops</span>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card" style="padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+    <form method="GET" action="{{ url_for('seminars_page') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+        <div style="flex: 2; min-width: 200px;">
+            <label class="form-label" style="font-size: 0.8rem;">Search Seminars</label>
+            <input type="text" name="search" class="form-control" placeholder="Search by seminar title or organizer..." value="{{ search }}">
+        </div>
+        <div style="flex: 1; min-width: 160px;">
+            <label class="form-label" style="font-size: 0.8rem;">Participation Type</label>
+            <select name="type" class="form-control">
+                <option value="">All Roles</option>
+                <option value="Presenter" {% if current_type == 'Presenter' %}selected{% endif %}>Presenter</option>
+                <option value="Keynote" {% if current_type == 'Keynote' %}selected{% endif %}>Keynote</option>
+                <option value="Attendee" {% if current_type == 'Attendee' %}selected{% endif %}>Attendee</option>
+                <option value="Organizer" {% if current_type == 'Organizer' %}selected{% endif %}>Organizer</option>
+            </select>
+        </div>
+        <div style="flex: 1; min-width: 180px;">
+            <label class="form-label" style="font-size: 0.8rem;">Student</label>
+            <select name="student_id" class="form-control">
+                <option value="">All Students</option>
+                {% for st in all_students %}
+                <option value="{{ st.id }}" {% if current_student_id == st.id|string %}selected{% endif %}>{{ st.full_name }} ({{ st.student_code }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button type="submit" class="btn btn-secondary">Filter</button>
+            {% if search or current_type or current_student_id %}
+            <a href="{{ url_for('seminars_page') }}" class="btn btn-secondary" style="color: var(--text-muted);">Reset</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Seminars Table -->
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Seminar / Conference Title</th>
+                    <th>Organizer</th>
+                    <th>Role</th>
+                    <th>Event Date</th>
+                    <th>Certificate Details</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sem in seminars %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('student_profile', student_id=sem.student_id) }}" style="color: var(--primary); font-weight: 700; text-decoration: none;">
+                            {{ sem.full_name }}
+                        </a>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">{{ sem.student_code }}</div>
+                    </td>
+                    <td><strong>{{ sem.title }}</strong></td>
+                    <td style="color: var(--text-muted);">{{ sem.organizer }}</td>
+                    <td>
+                        <span class="badge {% if sem.participation_type in ['Presenter', 'Keynote'] %}badge-active{% else %}badge-grade{% endif %}">
+                            {{ sem.participation_type }}
+                        </span>
+                    </td>
+                    <td>{{ sem.event_date }}</td>
+                    <td><code>{{ sem.certificate_details or 'None' }}</code></td>
+                    <td style="text-align: right;">
+                        <form method="POST" action="{{ url_for('seminar_delete', seminar_id=sem.id) }}" style="display: inline;" onsubmit="return confirm('Remove {{ sem.title }}?');">
+                            <button type="submit" class="btn btn-sm btn-danger" style="padding: 0.2rem 0.5rem;">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                        No seminars found matching criteria. Click "+ Record New Seminar" to log an event.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Seminar Modal -->
+<div class="modal-overlay" id="addMasterSeminarModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="card-title" style="font-size: 1.15rem;">Record Seminar / Workshop</h2>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form method="POST" action="{{ url_for('seminar_create_master') }}">
+            <div class="form-group">
+                <label class="form-label">Student *</label>
+                <select name="student_id" class="form-control" required>
+                    <option value="">-- Select Student --</option>
+                    {% for st in all_students %}
+                    <option value="{{ st.id }}">{{ st.full_name }} ({{ st.student_code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Seminar / Event Title *</label>
+                <input type="text" name="title" class="form-control" required placeholder="e.g. IEEE Conference on Cloud Systems">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Organizer *</label>
+                <input type="text" name="organizer" class="form-control" required placeholder="e.g. IEEE Computer Society">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Event Date *</label>
+                    <input type="date" name="event_date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Participation Type</label>
+                    <select name="participation_type" class="form-control">
+                        <option value="Attendee">Attendee</option>
+                        <option value="Presenter">Presenter</option>
+                        <option value="Organizer">Organizer</option>
+                        <option value="Keynote">Keynote</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Certificate Details</label>
+                <input type="text" name="certificate_details" class="form-control" placeholder="e.g. CERT-IEEE-2024-998">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem;">
+                <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Seminar & Sync</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

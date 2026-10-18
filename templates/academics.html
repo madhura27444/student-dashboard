@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}Academic & Marks &bull; Student Academic Progression System{% endblock %}
+{% block page_title %}Academic Records & Subject Marks Directory{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">Academic Semesters & Subject Marks</h1>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Relational semester milestones, credit weights, and automatic 10-point scale grade calculations</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <a href="{{ url_for('export_excel_file') }}" class="btn btn-secondary">&#128190; Export All to Excel</a>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="cards-grid">
+    <div class="stat-card">
+        <span class="stat-title">Semesters Recorded</span>
+        <span class="stat-value">{{ metrics.total_semesters }}</span>
+        <span class="stat-sub">Across all student cohorts</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-title">Students Evaluated</span>
+        <span class="stat-value" style="color: var(--accent);">{{ metrics.active_students }}</span>
+        <span class="stat-sub">Distinct student profiles</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-title">Average Semester SGPA</span>
+        <span class="stat-value" style="color: var(--primary);">{{ "%.2f"|format(metrics.avg_sgpa or 0.0) }}</span>
+        <span class="stat-sub">Department aggregate</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-title">Total Credits Earned</span>
+        <span class="stat-value">{{ "%.1f"|format(metrics.total_credits_earned or 0.0) }}</span>
+        <span class="stat-sub">Academic credits completed</span>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card" style="padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+    <form method="GET" action="{{ url_for('academics_page') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+        <div style="flex: 2; min-width: 220px;">
+            <label class="form-label" style="font-size: 0.8rem;">Filter by Student</label>
+            <select name="student_id" class="form-control">
+                <option value="">All Students</option>
+                {% for st in all_students %}
+                <option value="{{ st.id }}" {% if current_student_id == st.id|string %}selected{% endif %}>{{ st.full_name }} ({{ st.student_code }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="flex: 1; min-width: 140px;">
+            <label class="form-label" style="font-size: 0.8rem;">Semester Number</label>
+            <select name="semester" class="form-control">
+                <option value="">All Semesters</option>
+                {% for n in range(1, 9) %}
+                <option value="{{ n }}" {% if current_sem_num == n|string %}selected{% endif %}>Semester {{ n }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <button type="submit" class="btn btn-secondary">Filter</button>
+            {% if current_student_id or current_sem_num %}
+            <a href="{{ url_for('academics_page') }}" class="btn btn-secondary" style="color: var(--text-muted);">Reset</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Semesters Master List -->
+{% for sem in semesters %}
+<div class="card" style="margin-bottom: 1.25rem;">
+    <div class="card-header" style="background-color: var(--bg-muted); margin: -1.5rem -1.5rem 1rem -1.5rem; padding: 1rem 1.5rem; border-radius: var(--radius-md) var(--radius-md) 0 0;">
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div>
+                <a href="{{ url_for('student_profile', student_id=sem.student_id) }}" style="font-size: 1.1rem; font-weight: 800; color: var(--primary); text-decoration: none;">
+                    {{ sem.full_name }}
+                </a>
+                <span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 0.5rem;">(<code>{{ sem.student_code }}</code>)</span>
+            </div>
+            <span class="badge" style="background: white; border: 1px solid var(--border-color); font-weight: 700;">
+                Semester {{ sem.semester_number }} &bull; {{ sem.academic_year }}
+            </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <span>Credits: <strong>{{ "%.1f"|format(sem.credits) }}</strong></span>
+            <span>SGPA: <strong style="color: var(--primary); font-size: 1.05rem;">{{ "%.2f"|format(sem.sgpa) }}</strong></span>
+            <span>Cumulative CGPA: <strong style="color: var(--accent); font-size: 1.05rem;">{{ "%.2f"|format(sem.cgpa) }}</strong></span>
+            <button class="btn btn-sm btn-secondary" onclick="openAddMarkModal({{ sem.id }}, {{ sem.semester_number }}, '{{ sem.full_name }}')">+ Add Subject</button>
+        </div>
+    </div>
+
+    <!-- Subject Marks Table -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject Code</th>
+                    <th>Subject Name</th>
+                    <th>Credits</th>
+                    <th>Max Marks</th>
+                    <th>Obtained Marks</th>
+                    <th>Calculated Grade</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in sem.marks %}
+                <tr>
+                    <td><strong><code>{{ m.subject_code }}</code></strong></td>
+                    <td>{{ m.subject_name }}</td>
+                    <td>{{ m.credits }}</td>
+                    <td>{{ m.max_marks }}</td>
+                    <td>{{ m.obtained_marks }}</td>
+                    <td><span class="badge badge-grade">{{ m.grade }}</span></td>
+                    <td style="text-align: right;">
+                        <form method="POST" action="{{ url_for('mark_delete', mark_id=m.id) }}" style="display: inline;" onsubmit="return confirm('Remove mark for {{ m.subject_name }}?');">
+                            <button type="submit" class="btn btn-sm btn-danger" style="padding: 0.2rem 0.5rem;">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.25rem;">
+                        No subject marks entered for this semester yet. Click "+ Add Subject" to record marks and compute SGPA.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+    No academic semester records found matching the filter criteria.
+</div>
+{% endfor %}
+
+<!-- Add Subject Mark Modal -->
+<div class="modal-overlay" id="addMarkModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="card-title" style="font-size: 1.15rem;" id="markModalTitle">Add Subject Mark</h2>
+            <button class="modal-close" data-modal-close>&times;</button>
+        </div>
+        <form id="markForm" method="POST" action="">
+            <div class="form-group">
+                <label class="form-label">Subject Code *</label>
+                <input type="text" name="subject_code" class="form-control" required placeholder="e.g. CS401" style="text-transform: uppercase;">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Subject Name *</label>
+                <input type="text" name="subject_name" class="form-control" required placeholder="e.g. Operating Systems">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Credits *</label>
+                    <input type="number" step="0.5" min="1" max="10" name="credits" class="form-control" value="4.0" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Max Marks</label>
+                    <input type="number" id="max_marks" name="max_marks" class="form-control" value="100.0" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Obtained Marks *</label>
+                <input type="number" step="0.5" id="obtained_marks" name="obtained_marks" class="form-control" required placeholder="e.g. 88.5">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <span id="calculated_grade_badge" class="badge badge-grade" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+                    Grade: Predictor Ready
+                </span>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button type="button" class="btn btn-secondary" data-modal-close>Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Mark & Recalculate SGPA</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openAddMarkModal(semId, semNum, studentName) {
+        const form = document.getElementById('markForm');
+        form.action = `/semesters/${semId}/marks/add`;
+        document.getElementById('markModalTitle').textContent = `Add Subject Mark (Semester ${semNum} - ${studentName})`;
+        document.getElementById('addMarkModal').classList.add('active');
+    }
+</script>
+{% endblock %}
