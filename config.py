@@ -24,7 +24,7 @@ class Config:
     SQLITE_PATH = os.environ.get('SQLITE_PATH', os.path.join(BASE_DIR, 'student_progression.db'))
     
     # Google Sheets Webhook Configuration
-    GOOGLE_SHEETS_WEBHOOK_URL = os.environ.get('GOOGLE_SHEETS_WEBHOOK_URL', '')
+    GOOGLE_SHEETS_WEBHOOK_URL = os.environ.get('GOOGLE_SHEETS_WEBHOOK_URL', 'https://script.google.com/macros/s/AKfycbzxA9xQP5pvywlcgz1O4o4rp4yQSCkmdCWNeEGK678eAuE-0DioKE0AMjL9O5ZzzK0J/exec')
     GOOGLE_SHEETS_SECRET_TOKEN = os.environ.get('GOOGLE_SHEETS_SECRET_TOKEN', 'madhura-academic-sync-token-2026')
     GOOGLE_SHEET_URL = os.environ.get('GOOGLE_SHEET_URL', 'https://docs.google.com/spreadsheets/d/10vNUm7xkIFV43axJF2nbKnTb_jY-1vGxx1d1AsjCu50/edit')
     GOOGLE_SPREADSHEET_ID = os.environ.get('GOOGLE_SPREADSHEET_ID', '10vNUm7xkIFV43axJF2nbKnTb_jY-1vGxx1d1AsjCu50')
