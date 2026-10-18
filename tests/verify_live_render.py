@@ -2,8 +2,8 @@ import requests
 import re
 import time
 
-LIVE_URL = "https://student-academic-progression-kajal.onrender.com"
-APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzehCTZN5K2m7oKGePwnSh6EbGchnqQi0SpnKFeFqZ_F8POdeLSRYv7ZI3b4TGwnTjf/exec"
+LIVE_URL = "https://student-progression-madhura.onrender.com"
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzxA9xQP5pvywlcgz1O4o4rp4yQSCkmdCWNeEGK678eAuE-0DioKE0AMjL9O5ZzzK0J/exec"
 
 s = requests.Session()
 
@@ -24,9 +24,9 @@ print("Apps Script GET response:", r_as.json())
 
 print("\n--- 4. Test adding a student on Live Render App ---")
 student_data = {
-    "student_code": "LIVE2026TEST",
-    "full_name": "Kajal Test Student",
-    "email": "kajal_test_live@example.com",
+    "student_code": "LIVE2026MADHURA",
+    "full_name": "Madhura Test Student",
+    "email": "madhura_test_live@example.com",
     "admission_year": 2024,
     "current_status": "Active"
 }
