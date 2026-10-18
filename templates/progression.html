@@ -195,18 +195,20 @@
     datasets.push({
         label: '{{ selected_student.full_name }} (SGPA)',
         data: studentData,
-        borderColor: '#0d9488',
-        backgroundColor: 'rgba(13, 148, 136, 0.15)',
+        borderColor: '#1e3a8a',
+        backgroundColor: 'rgba(30, 58, 138, 0.15)',
         borderWidth: 3,
         fill: true,
         tension: 0.3,
-        pointBackgroundColor: '#0f766e',
+        pointBackgroundColor: '#2563eb',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
         pointRadius: 6
     });
     datasets.push({
         label: '{{ selected_student.full_name }} (Cumulative CGPA)',
         data: studentCgpaData,
-        borderColor: '#10b981',
+        borderColor: '#0284c7',
         borderWidth: 2.5,
         tension: 0.2,
         pointRadius: 5
@@ -245,8 +247,8 @@
             datasets: [{
                 label: 'Grades Count',
                 data: gCounts.length ? gCounts : [10, 8, 6, 4, 2, 1, 0, 0],
-                backgroundColor: '#0d9488',
-                borderRadius: 4
+                backgroundColor: '#1e3a8a',
+                borderRadius: 6
             }]
         },
         options: {

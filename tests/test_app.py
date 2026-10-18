@@ -7,26 +7,16 @@ from config import Config
 from services import db, calculations, google_sheets, export_excel
 
 @pytest.fixture
-def client():
-    # Use temporary SQLite DB for testing
-    test_db = os.path.join(os.path.dirname(__file__), 'test_academic.db')
+def client(tmp_path):
+    test_db = str(tmp_path / "test_academic.db")
     Config.SQLITE_PATH = test_db
     Config.DB_TYPE = 'sqlite'
     app.config['TESTING'] = True
     
-    # Initialize fresh DB
-    if os.path.exists(test_db):
-        os.remove(test_db)
     db.init_db(seed_if_empty=True)
 
     with app.test_client() as client:
         yield client
-
-    if os.path.exists(test_db):
-        try:
-            os.remove(test_db)
-        except Exception:
-            pass
 
 def test_health_check(client):
     res = client.get('/health')
