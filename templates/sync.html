@@ -102,7 +102,7 @@
         <div>
             <div style="font-size: 0.8rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted);">Connected Target Spreadsheet</div>
             <div style="font-size: 1rem; font-weight: 700; color: var(--text-main); margin-top: 0.2rem;">
-                Kajal's Academic Progression Spreadsheet &bull; ID: <code>{{ sync_status.spreadsheet_id }}</code>
+                Academic Progression Cloud Spreadsheet
             </div>
             <div style="font-size: 0.825rem; color: var(--text-muted); margin-top: 0.25rem;">
                 Worksheets: <code>Students</code>, <code>SchoolRecords</code>, <code>Semesters</code>, <code>StudentMarks</code>, <code>GapYears</code>, <code>Seminars</code>, <code>Activities</code>
@@ -186,7 +186,7 @@
     </div>
     <div style="font-size: 0.875rem; color: var(--text-main); line-height: 1.6;">
         <ol style="margin-left: 1.25rem; color: var(--text-muted);">
-            <li><strong>Target Spreadsheet:</strong> Bound to <code>{{ sync_status.spreadsheet_id }}</code>.</li>
+            <li><strong>Target Spreadsheet:</strong> Securely connected via authenticated Google Apps Script Web App.</li>
             <li><strong>Google Apps Script:</strong> Handled by <code>google_apps_script.js</code> which enforces secret token verification.</li>
             <li><strong>Durable Transactional Outbox:</strong> All user mutations commit to the database first, eliminating UI freezes. The background worker syncs pending items to Google Sheets via idempotent upserts.</li>
             <li><strong>Change Data Capture (CDC):</strong> Every state change across Students, Semesters, Marks, Gaps, and Activities is tracked in <code>sync_log</code> with full payload snapshots.</li>

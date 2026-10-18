@@ -10,6 +10,6 @@ services:
       - key: DB_TYPE
         value: sqlite
       - key: GOOGLE_SHEETS_SECRET_TOKEN
-        value: kajal-academic-sync-token-2026
+        value: academic-sync-token-2026
       - key: GOOGLE_SHEETS_WEBHOOK_URL
         sync: false
