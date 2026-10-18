@@ -213,14 +213,14 @@ def test_google_sheets_request_and_response(client, monkeypatch):
 
     import json
     # Mock successful response
-    monkeypatch.setattr(requests, "post", lambda url, **kwargs: MockResponse({"status": "success", "message": "Synced successfully"}))
+    monkeypatch.setattr(google_sheets.requests, "post", lambda url, **kwargs: MockResponse({"status": "success", "message": "Synced successfully"}))
     Config.GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/TEST/exec"
 
     res = google_sheets.push_event_to_sheets("Students", "UPSERT", {"id": 1, "student_code": "TEST"})
     assert res['status'] == 'SUCCESS'
 
     # Mock error response
-    monkeypatch.setattr(requests, "post", lambda url, **kwargs: MockResponse({"status": "error", "message": "Spreadsheet not found"}, 400))
+    monkeypatch.setattr(google_sheets.requests, "post", lambda url, **kwargs: MockResponse({"status": "error", "message": "Spreadsheet not found"}, 400))
     res_err = google_sheets.push_event_to_sheets("Students", "UPSERT", {"id": 1, "student_code": "TEST"})
     assert res_err['status'] == 'FAILED'
 
@@ -233,7 +233,8 @@ def test_outbox_sync_and_retry(client, monkeypatch):
         def json(self):
             return {"status": "error"}
 
-    monkeypatch.setattr(requests, "post", lambda url, **kwargs: MockFailResponse())
+    monkeypatch.setattr(google_sheets, "trigger_background_outbox_processing", lambda: None)
+    monkeypatch.setattr(google_sheets.requests, "post", lambda url, **kwargs: MockFailResponse())
     Config.GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/TEST/exec"
 
     # Queue an event

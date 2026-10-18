@@ -3,12 +3,12 @@
 // ==============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Mobile Sidebar toggle
+    // Mobile Navigation toggle
     const mobileBtn = document.querySelector('.mobile-menu-btn');
-    const sidebar = document.querySelector('.sidebar');
-    if (mobileBtn && sidebar) {
+    const navMenu = document.getElementById('topNavMenu') || document.querySelector('.sidebar');
+    if (mobileBtn && navMenu) {
         mobileBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('mobile-open');
+            navMenu.classList.toggle('mobile-open');
         });
     }
 

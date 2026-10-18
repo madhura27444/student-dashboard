@@ -8,112 +8,116 @@
     <!-- Google Fonts & Chart.js -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block extra_head %}{% endblock %}
 </head>
 <body>
     <div class="app-layout">
-        <!-- Left Sidebar Navigation -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <a href="{{ url_for('dashboard') }}" class="brand-link">
-                    <span class="brand-icon">SP</span>
-                    <div>
-                        <div>StudentProgression</div>
-                        <div class="brand-sub">DBMS &bull; Academic Portfolio</div>
+        <!-- Top Executive Navy Navigation Panel -->
+        <header class="top-nav-panel">
+            <div class="top-nav-container">
+                <!-- Brand Logo & Title -->
+                <div class="top-nav-brand">
+                    <a href="{{ url_for('dashboard') }}" class="brand-link">
+                        <span class="brand-icon">SP</span>
+                        <div class="brand-text-group">
+                            <span class="brand-name">StudentProgression</span>
+                            <span class="brand-sub">DBMS &bull; Academic Portfolio</span>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <button class="mobile-menu-btn" aria-label="Toggle navigation">&#9776;</button>
+
+                <!-- Horizontal Navigation Links -->
+                <nav class="top-nav-menu" id="topNavMenu">
+                    <ul class="nav-links-list">
+                        <li>
+                            <a href="{{ url_for('dashboard') }}" class="nav-tab-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                                <span class="nav-icon">&#128202;</span>
+                                <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('student_directory') }}" class="nav-tab-link {% if request.endpoint in ['student_directory', 'student_profile'] %}active{% endif %}">
+                                <span class="nav-icon">&#128101;</span>
+                                <span>Students</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('progression_chart_page') }}" class="nav-tab-link {% if request.endpoint == 'progression_chart_page' %}active{% endif %}">
+                                <span class="nav-icon">&#128200;</span>
+                                <span>Progression</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('academics_page') }}" class="nav-tab-link {% if request.endpoint == 'academics_page' %}active{% endif %}">
+                                <span class="nav-icon">&#127891;</span>
+                                <span>Academics & Marks</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('seminars_page') }}" class="nav-tab-link {% if request.endpoint == 'seminars_page' %}active{% endif %}">
+                                <span class="nav-icon">&#128221;</span>
+                                <span>Seminars</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('activities_page') }}" class="nav-tab-link {% if request.endpoint == 'activities_page' %}active{% endif %}">
+                                <span class="nav-icon">&#127942;</span>
+                                <span>Activities</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('sync_page') }}" class="nav-tab-link {% if request.endpoint == 'sync_page' %}active{% endif %}">
+                                <span class="nav-icon">&#128260;</span>
+                                <span>Sheets Sync</span>
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- Top Utilities (DB Status, Excel Export, Sheets, Actions) -->
+                    <div class="top-nav-actions">
+                        <div class="db-status-pill" title="Current relational database engine">
+                            <span class="status-dot"></span>
+                            <span>{{ current_db_badge }}</span>
+                        </div>
+
+                        <a href="{{ url_for('export_excel_file') }}" class="btn-top-export" title="Export all 7 relational tables to .xlsx">
+                            <span>&#128190;</span> Excel Export
+                        </a>
+
+                        <form method="POST" action="{{ url_for('sync_trigger_bulk') }}" style="display: inline;">
+                            <button type="submit" class="btn-top-sync" title="Push live snapshot to Google Sheets">&#128260; Sync Now</button>
+                        </form>
+
+                        <a href="{{ google_sheet_url }}" target="_blank" rel="noopener noreferrer" class="link-sheet-ext" title="Open synchronized Google Spreadsheet">
+                            <span>&#8599;</span> Sheet
+                        </a>
+
+                        <a href="{{ url_for('student_directory') }}" class="btn btn-sm btn-primary btn-add-student">+ Add Student</a>
                     </div>
-                </a>
+                </nav>
             </div>
+        </header>
 
-            <div class="sidebar-nav">
-                <div class="nav-section-title">Core Management</div>
-                <ul class="sidebar-menu">
-                    <li>
-                        <a href="{{ url_for('dashboard') }}" class="sidebar-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
-                            <span class="nav-icon">&#128202;</span>
-                            <span>Dashboard</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('student_directory') }}" class="sidebar-link {% if request.endpoint in ['student_directory', 'student_profile'] %}active{% endif %}">
-                            <span class="nav-icon">&#128101;</span>
-                            <span>Students Directory</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('progression_chart_page') }}" class="sidebar-link {% if request.endpoint == 'progression_chart_page' %}active{% endif %}">
-                            <span class="nav-icon">&#128200;</span>
-                            <span>Progression Chart</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('academics_page') }}" class="sidebar-link {% if request.endpoint == 'academics_page' %}active{% endif %}">
-                            <span class="nav-icon">&#127891;</span>
-                            <span>Academic & Marks</span>
-                        </a>
-                    </li>
-                </ul>
-
-                <div class="nav-section-title">Portfolio & Activities</div>
-                <ul class="sidebar-menu">
-                    <li>
-                        <a href="{{ url_for('seminars_page') }}" class="sidebar-link {% if request.endpoint == 'seminars_page' %}active{% endif %}">
-                            <span class="nav-icon">&#128221;</span>
-                            <span>Seminars Portfolio</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('activities_page') }}" class="sidebar-link {% if request.endpoint == 'activities_page' %}active{% endif %}">
-                            <span class="nav-icon">&#127942;</span>
-                            <span>Activities Portfolio</span>
-                        </a>
-                    </li>
-                </ul>
-
-                <div class="nav-section-title">Integrations & Sync</div>
-                <ul class="sidebar-menu">
-                    <li>
-                        <a href="{{ url_for('sync_page') }}" class="sidebar-link {% if request.endpoint == 'sync_page' %}active{% endif %}">
-                            <span class="nav-icon">&#128260;</span>
-                            <span>Google Sheets Sync</span>
-                        </a>
-                    </li>
-                </ul>
+        <!-- Subheader Title Bar -->
+        <div class="subheader-bar">
+            <div class="subheader-container">
+                <div class="subheader-title">
+                    {% block page_title %}Student Academic Progression System{% endblock %}
+                </div>
+                <div class="subheader-meta">
+                    <span>3NF Relational DBMS</span> &bull; <span>7 Normalized Tables</span> &bull; <span>Google Sheets Synced</span>
+                </div>
             </div>
+        </div>
 
-            <div class="sidebar-footer">
-                <div class="db-status-pill" title="Current relational database engine">
-                    <span class="status-dot"></span>
-                    <span>{{ current_db_badge }}</span>
-                </div>
-                <a href="{{ url_for('export_excel_file') }}" class="btn-sidebar-export" title="Export all 7 relational tables to .xlsx">
-                    <span>&#128190;</span> Export to Excel (.xlsx)
-                </a>
-                <a href="{{ google_sheet_url }}" target="_blank" rel="noopener noreferrer" class="link-sheet-ext" title="Open synchronized Google Spreadsheet">
-                    <span>&#8599;</span> Open Connected Sheet
-                </a>
-            </div>
-        </aside>
-
-        <!-- Main Wrapper -->
-        <div class="main-wrapper">
-            <!-- Topbar Header -->
-            <header class="topbar">
-                <div class="topbar-left">
-                    <button class="mobile-menu-btn" aria-label="Toggle navigation">&#9776;</button>
-                    <div class="topbar-title">{% block page_title %}Student Academic Progression System{% endblock %}</div>
-                </div>
-                <div class="topbar-right">
-                    <form method="POST" action="{{ url_for('sync_trigger_bulk') }}" style="display: inline;">
-                        <button type="submit" class="btn btn-sm btn-secondary" title="Push live snapshot to Google Sheets">&#128260; Sync to Sheets</button>
-                    </form>
-                    <a href="{{ url_for('student_directory') }}" class="btn btn-sm btn-primary">+ Add Student</a>
-                </div>
-            </header>
-
-            <!-- Main Body Content -->
+        <!-- Main Body Content -->
+        <main class="main-content-area">
             <div class="content-body">
                 <!-- Flash notifications -->
                 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -130,11 +134,13 @@
 
                 {% block content %}{% endblock %}
             </div>
+        </main>
 
-            <footer class="footer">
+        <footer class="footer">
+            <div class="footer-container">
                 <div>Student Academic Progression & Portfolio Management System &bull; 3NF Relational DBMS &bull; Connected to Google Sheets</div>
-            </footer>
-        </div>
+            </div>
+        </footer>
     </div>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
